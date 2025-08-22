@@ -323,15 +323,17 @@ const Header: React.FC = () => {
               >
                 {isAuthenticated && user ? (
                   <Avatar
+                    src={user.pictureUrl}
                     sx={{
                       width: 32,
                       height: 32,
-                      bgcolor: '#2563eb',
+                      bgcolor: user.pictureUrl ? 'transparent' : '#2563eb',
                       fontSize: '0.875rem',
                       fontWeight: 600,
+                      border: user.pictureUrl ? '2px solid #e2e8f0' : 'none',
                     }}
                   >
-                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                    {!user.pictureUrl && user.firstName.charAt(0)}{!user.pictureUrl && user.lastName.charAt(0)}
                   </Avatar>
                 ) : (
                   <AccountCircle />

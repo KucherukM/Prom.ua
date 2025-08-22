@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiService, LoginRequest, RegisterRequest, UserDto } from '../services/api';
 
 interface User {
   id: number;
@@ -6,7 +7,8 @@ interface User {
   lastName: string;
   email: string;
   username: string;
-  phone?: string;
+  phoneNumber?: string;
+  pictureUrl?: string;
 }
 
 interface AuthContextType {
@@ -14,8 +16,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
+  loginWithGoogle: (idToken: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  setUser: (user: User) => void;
 }
 
 interface RegisterData {
@@ -24,7 +28,7 @@ interface RegisterData {
   email: string;
   username: string;
   password: string;
-  phone?: string;
+  phoneNumber?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,39 +50,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        localStorage.removeItem('user');
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          console.log('Loading user data from server...');
+          const userData = await apiService.getCurrentUser();
+          console.log('User data loaded:', userData);
+          setUser(userData);
+          // Update localStorage with fresh data from server
+          localStorage.setItem('user', JSON.stringify(userData));
+          console.log('User data saved to localStorage');
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const loginRequest: LoginRequest = { email, password };
+      const response = await apiService.login(loginRequest);
 
-      if (email === 'test@example.com' && password === 'password') {
-        const mockUser: User = {
-          id: 1,
-          firstName: 'Іван',
-          lastName: 'Петренко',
-          email: 'test@example.com',
-          username: 'ivan_petrenko',
-          phone: '+380 44 123 45 67'
-        };
-
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        return true;
-      }
-
-      return false;
+      setUser(response.user);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      return true;
     } catch (error) {
       return false;
     } finally {
@@ -90,19 +95,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const newUser: User = {
-        id: Date.now(),
+      const registerRequest: RegisterRequest = {
         firstName: userData.firstName,
         lastName: userData.lastName,
         email: userData.email,
         username: userData.username,
-        phone: userData.phone
+        password: userData.password,
+        phoneNumber: userData.phoneNumber
       };
 
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      const response = await apiService.register(registerRequest);
+
+      setUser(response.user);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      return true;
+    } catch (error) {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (idToken: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+
+      const response = await apiService.googleAuth(idToken);
+
+      setUser(response.user);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
       return true;
     } catch (error) {
       return false;
@@ -113,7 +136,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
+  };
+
+  const updateUser = (newUser: User) => {
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const value: AuthContextType = {
@@ -121,8 +150,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     login,
     register,
+    loginWithGoogle,
     logout,
-    loading
+    loading,
+    setUser: updateUser
   };
 
   return (

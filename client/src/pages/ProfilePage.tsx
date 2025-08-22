@@ -18,9 +18,12 @@ import {
   Card,
   CardContent,
   CardMedia,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { Person as PersonIcon, ShoppingBag as OrdersIcon, Favorite as WishlistIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -45,17 +48,20 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   // Використовуємо дані з AuthContext
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
     username: user?.username || '',
-    phone: user?.phone || '',
+    phoneNumber: user?.phoneNumber || '',
+    pictureUrl: user?.pictureUrl || '',
   });
 
   const orders = [
@@ -106,13 +112,36 @@ const ProfilePage: React.FC = () => {
       lastName: user?.lastName || '',
       email: user?.email || '',
       username: user?.username || '',
-      phone: user?.phone || '',
+      phoneNumber: user?.phoneNumber || '',
+      pictureUrl: user?.pictureUrl || '',
     });
   };
 
-  const handleSave = () => {
-    // User data update will be implemented here
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const updatedUser = await apiService.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber || undefined,
+        pictureUrl: formData.pictureUrl || undefined
+      });
+
+      // Update user in context
+      setUser(updatedUser);
+
+      setIsEditing(false);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Помилка оновлення профілю');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -122,13 +151,26 @@ const ProfilePage: React.FC = () => {
       lastName: user?.lastName || '',
       email: user?.email || '',
       username: user?.username || '',
-      phone: user?.phone || '',
+      phoneNumber: user?.phoneNumber || '',
+      pictureUrl: user?.pictureUrl || '',
     });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setFormData(prev => ({ ...prev, pictureUrl: result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -165,21 +207,31 @@ const ProfilePage: React.FC = () => {
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, textAlign: 'center' }}>
             <Avatar
-              sx={{ width: 120, height: 120, mx: 'auto', mb: 2, bgcolor: 'primary.main' }}
+              src={user.pictureUrl}
+              sx={{
+                width: 120,
+                height: 120,
+                mx: 'auto',
+                mb: 2,
+                bgcolor: user.pictureUrl ? 'transparent' : 'primary.main',
+                border: user.pictureUrl ? '3px solid #e2e8f0' : 'none',
+              }}
             >
-              <Typography variant="h4">
-                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-              </Typography>
+              {!user.pictureUrl && (
+                <Typography variant="h4">
+                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                </Typography>
+              )}
             </Avatar>
-            
+
             <Typography variant="h5" gutterBottom>
               {user.firstName} {user.lastName}
             </Typography>
-            
+
             <Typography variant="body2" color="text.secondary" gutterBottom>
               @{user.username}
             </Typography>
-            
+
             <Typography variant="body2" color="text.secondary">
               {user.email}
             </Typography>
@@ -206,6 +258,12 @@ const ProfilePage: React.FC = () => {
             </Tabs>
 
             <TabPanel value={tabValue} index={0}>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
               <Box component="form">
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
@@ -228,6 +286,46 @@ const ProfilePage: React.FC = () => {
                       disabled={!isEditing}
                     />
                   </Grid>
+
+                  {isEditing && (
+                    <Grid item xs={12}>
+                      <Box sx={{ textAlign: 'center', mb: 2 }}>
+                        <Avatar
+                          src={formData.pictureUrl}
+                          sx={{
+                            width: 100,
+                            height: 100,
+                            mx: 'auto',
+                            mb: 2,
+                            bgcolor: formData.pictureUrl ? 'transparent' : 'primary.main',
+                            border: formData.pictureUrl ? '3px solid #e2e8f0' : 'none',
+                          }}
+                        >
+                          {!formData.pictureUrl && (
+                            <Typography variant="h5">
+                              {formData.firstName.charAt(0)}{formData.lastName.charAt(0)}
+                            </Typography>
+                          )}
+                        </Avatar>
+                        <input
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          id="image-upload"
+                          type="file"
+                          onChange={handleImageUpload}
+                        />
+                        <label htmlFor="image-upload">
+                          <Button
+                            variant="outlined"
+                            component="span"
+                            startIcon={<PersonIcon />}
+                          >
+                            Змінити фото
+                          </Button>
+                        </label>
+                      </Box>
+                    </Grid>
+                  )}
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -253,8 +351,8 @@ const ProfilePage: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Телефон"
-                      name="phone"
-                      value={formData.phone}
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
                       onChange={handleChange}
                       disabled={!isEditing}
                     />
@@ -263,10 +361,18 @@ const ProfilePage: React.FC = () => {
 
                 {isEditing && (
                   <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                    <Button variant="contained" onClick={handleSave}>
-                      Зберегти
+                    <Button
+                      variant="contained"
+                      onClick={handleSave}
+                      disabled={loading}
+                    >
+                      {loading ? <CircularProgress size={20} /> : 'Зберегти'}
                     </Button>
-                    <Button variant="outlined" onClick={handleCancel}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancel}
+                      disabled={loading}
+                    >
                       Скасувати
                     </Button>
                   </Box>
@@ -278,7 +384,7 @@ const ProfilePage: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Історія замовлень
               </Typography>
-              
+
               {orders.map((order) => (
                 <Card key={order.id} sx={{ mb: 2 }}>
                   <CardContent>
@@ -291,15 +397,15 @@ const ProfilePage: React.FC = () => {
                         color={getStatusColor(order.status) as any}
                       />
                     </Box>
-                    
+
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Дата: {order.date}
                     </Typography>
-                    
+
                     <Typography variant="h6" color="primary" gutterBottom>
                       Всього: {order.total.toLocaleString()} ₴
                     </Typography>
-                    
+
                     <List dense>
                       {order.items.map((item, index) => (
                         <ListItem key={index}>
@@ -319,7 +425,7 @@ const ProfilePage: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Бажані товари
               </Typography>
-              
+
               <Grid container spacing={2}>
                 {wishlist.map((item) => (
                   <Grid item xs={12} sm={6} md={4} key={item.id}>

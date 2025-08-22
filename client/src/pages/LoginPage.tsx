@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -69,13 +70,16 @@ const LoginPage: React.FC = () => {
       const success = await login(formData.email, formData.password);
 
       if (success) {
-        // Перенаправляємо на сторінку, з якої користувач прийшов, або на головну
         navigate(from, { replace: true });
       } else {
         setLoginError('Невірний email або пароль');
       }
     } catch (error) {
-      setLoginError('Помилка входу. Спробуйте ще раз.');
+      if (error instanceof Error) {
+        setLoginError(error.message);
+      } else {
+        setLoginError('Помилка входу. Спробуйте ще раз.');
+      }
     }
   };
 
@@ -144,6 +148,17 @@ const LoginPage: React.FC = () => {
               )}
             </Button>
 
+            <Box sx={{ mt: 2, mb: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                або
+              </Typography>
+            </Box>
+
+            <GoogleLoginButton
+              onSuccess={() => navigate(from, { replace: true })}
+              onError={(error) => setLoginError(error)}
+            />
+
             <Box sx={{ textAlign: 'center' }}>
               <Link href="/forgot-password" variant="body2">
                 Забули пароль?
@@ -159,16 +174,13 @@ const LoginPage: React.FC = () => {
               </Typography>
             </Box>
 
-            {/* Тестові дані для демонстрації */}
+            {/* Інформація про реєстрацію */}
             <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                <strong>Тестові дані для входу:</strong>
+                <strong>Немає акаунту?</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Email: test@example.com
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Пароль: password
+                Створіть новий акаунт для доступу до всіх функцій сайту
               </Typography>
             </Box>
           </Box>

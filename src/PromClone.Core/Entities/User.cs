@@ -32,6 +32,10 @@ public class User
     
     public bool IsActive { get; set; } = true;
     
+    // OAuth properties
+    public string? GoogleId { get; set; }
+    public string? PictureUrl { get; set; }
+    
     // Navigation properties
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();

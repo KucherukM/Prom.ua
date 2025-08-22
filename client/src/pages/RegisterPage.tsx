@@ -8,11 +8,16 @@ import {
   Link,
   Container,
   Grid,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const { register, loading } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,14 +25,19 @@ const RegisterPage: React.FC = () => {
     username: '',
     password: '',
     confirmPassword: '',
+    phoneNumber: '',
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [registerError, setRegisterError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    if (registerError) {
+      setRegisterError('');
     }
   };
 
@@ -72,21 +82,32 @@ const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     try {
-      const success = await register(formData);
-      
+      const success = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+        phoneNumber: formData.phoneNumber || undefined
+      });
+
       if (success) {
         navigate('/');
       } else {
         setRegisterError('Помилка реєстрації. Спробуйте ще раз.');
       }
     } catch (error) {
-      setRegisterError('Помилка реєстрації. Спробуйте ще раз.');
+      if (error instanceof Error) {
+        setRegisterError(error.message);
+      } else {
+        setRegisterError('Помилка реєстрації. Спробуйте ще раз.');
+      }
     }
   };
 
@@ -97,10 +118,16 @@ const RegisterPage: React.FC = () => {
           <Typography variant="h4" component="h1" align="center" gutterBottom>
             Реєстрація
           </Typography>
-          
+
           <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
             Створіть новий акаунт
           </Typography>
+
+          {registerError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {registerError}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
             <Grid container spacing={2}>
@@ -192,14 +219,44 @@ const RegisterPage: React.FC = () => {
               helperText={errors.confirmPassword}
             />
 
+            <TextField
+              margin="normal"
+              fullWidth
+              name="phoneNumber"
+              label="Номер телефону (необов'язково)"
+              type="tel"
+              id="phoneNumber"
+              autoComplete="tel"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              error={!!errors.phoneNumber}
+              helperText={errors.phoneNumber}
+            />
+
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Зареєструватися
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Зареєструватися'
+              )}
             </Button>
+
+            <Box sx={{ mt: 2, mb: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                або
+              </Typography>
+            </Box>
+
+            <GoogleLoginButton
+              onSuccess={() => navigate('/')}
+              onError={(error) => setRegisterError(error)}
+            />
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
