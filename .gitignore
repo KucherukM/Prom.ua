@@ -1,77 +1,37 @@
-# .NET
-bin/
-obj/
-*.user
-*.suo
-*.cache
-*.dll
-*.exe
-*.pdb
-*.log
-*.tmp
-*.temp
+# Database files
+*.db
+*.db-shm
+*.db-wal
 
-# Visual Studio
-.vs/
-*.sln.docstates
-*.userprefs
-*.sln.iml
+# Environment files
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.Test.json
 
-# Entity Framework
-Migrations/
-
-# React
-client/node_modules/
-client/.pnp
-client/.pnp.js
-client/coverage/
-client/build/
-client/.DS_Store
-client/.env.local
-client/.env.development.local
-client/.env.test.local
-client/.env.production.local
-client/npm-debug.log*
-client/yarn-debug.log*
-client/yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 
+# OS files
+.DS_Store
+Thumbs.db
+
 # Logs
-logs
 *.log
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Build outputs
+bin/
+obj/
+dist/
+build/
 
-# Coverage directory used by tools like istanbul
-coverage/
-
-# Dependency directories
+# Node modules
 node_modules/
 
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env 
+# Dependencies
+*.dll
+*.exe
+*.pdb 
